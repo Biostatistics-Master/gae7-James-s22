@@ -1,6 +1,6 @@
 ---
 title: "GAE7"
-author: "Your Name Here"
+author: James Simon
 format: 
   html:
     theme: custom.scss
@@ -34,6 +34,8 @@ library(broom)
 library(latex2exp)       
 library(kableExtra)
 library(tidyverse)
+library(redres)
+
 
 options(knitr.kable.NA = '')
 ```
@@ -48,6 +50,8 @@ Please see @Pintar.etal2018 for greater detail on experimental design and data c
 
 ```{r }
 #| label: dataImport
+#| tbl-cap: "First six observations of the data provided by @Pintar.etal2018"
+
 
 df1 <- read_csv("Pintar_etal_2018.csv",
                 show_col_types = FALSE)
@@ -76,10 +80,282 @@ df1$Fish <- factor(df1$Fish,
 
 df1$Block <- factor(df1$Block)
 
+kbl(
+  head(df1),
+  col.names = c(
+    "Block",
+    "Pool",
+    "Location",
+    "Time",
+    "Nutrient",
+    "Fish",
+    "Culex_Egg_Rafts",
+    "Hydrophilidae",
+    "Dytiscidae"
+    )
+  ) |>
+  kable_classic(
+    full = FALSE
+    )
+
+
 ```
 
 ### Statistical Methods
 
+One of the first steps we will take in order to analysize the data that is provided within @Pintar.etal2018 is to run an ANOVA summary on each of the variables we want to study. These are the number of Cullex Egg Rafts, Hydrophilidae, and Dytisciade. We want to see how related these are due to predation and the nutrient levels in the pool.
+
+```{r}
+#| label: tbl-fixedANOVA
+#| tbl-cap: "ANOVA summary for the Hydrophilidae data provided by @Pintar.etal2018"
+#| fig-show: hide
+
+modFixed <- aov(log(0.5 + Hydrophilidae*10) ~ Pool + Block, data = df1)
+
+plot(modFixed)
+
+#| label: tbl-fixedANOVAFIN
+#| tbl-cap: "ANOVA summary for the Hydrophilidae data provided by @Pintar.etal2018"
+#| fig-show: hide
+
+kbl(
+  Anova(modFixed),
+  digits = c(3,0,3,3)
+  ) |>
+  kable_classic()
+```
+
+```{r}
+#| label: tbl-fixedANOVA2
+#| tbl-cap: "ANOVA summary for the Cullex Egg Raft data provided by @Pintar.etal2018"
+#| fig-show: hide
+
+modFixed <- aov(log(0.5 + Culex_Egg_Rafts*10) ~ Pool + Block, data = df1)
+
+plot(modFixed)
+
+#| label: tbl-fixedANOVAFIN
+#| tbl-cap: "ANOVA summary for the Cullex Egg Rafts data provided by @Pintar.etal2018"
+#| fig-show: hide
+
+kbl(
+  Anova(modFixed),
+  digits = c(3,0,3,3)
+  ) |>
+  kable_classic()
+
+```
+
+```{r}
+#| label: tbl-fixedANOVA3
+#| tbl-cap: "ANOVA summary for the Dytiscidae data provided by @Pintar.etal2018"
+#| fig-show: hide
+
+modFixed <- aov(log(0.5 + Dytiscidae*10) ~ Pool + Block, data = df1)
+
+plot(modFixed)
+
+#| label: tbl-fixedANOVAFIN
+#| tbl-cap: "ANOVA summary for the Dytiscidae data provided by @Pintar.etal2018"
+#| fig-show: hide
+
+kbl(
+  Anova(modFixed),
+  digits = c(3,0,3,3)
+  ) |>
+  kable_classic()
+```
+
+After running a Fixed ANOVA, we can then make a linear model for each variable in order to see their correlation as well.
+
+```{r}
+#| label: tbl-HFactorial
+#| tbl-cap: "Linear model summary for the Hydrophilidae  data provided by @Pintar.etal2018"
+HFactorial <- lmer(Hydrophilidae ~ Fish*Nutrient + (1 | Block), data = df1)
+
+HAnova <- (anova(HFactorial))
+
+kbl(
+  HAnova, col.names = c(
+    "SS",
+    "MS",
+    "df1",
+    "df2",
+    "F",
+    "p"
+    
+  ),
+  digits = c(3,3,0,0,3,4)
+) |>
+  kable_classic()
+
+```
+
+```{r}
+#| label: tbl-CERFactorial
+#| tbl-cap: "Linear model summary for the Cullex Egg Raft  data provided by @Pintar.etal2018"
+CERFactorial <- lmer(Culex_Egg_Rafts ~ Fish*Nutrient + (1 | Block), data = df1)
+
+CERAnova <- (anova(CERFactorial))
+
+kbl(
+  CERAnova, col.names = c(
+    "SS",
+    "MS",
+    "df1",
+    "df2",
+    "F",
+    "p"
+    
+  ),
+  digits = c(3,3,0,0,3,4)
+) |>
+  kable_classic()
+```
+
+```{r}
+#| label: tbl-DyFactorial
+#| tbl-cap: "Linear model summary for the Dytiscidae  data provided by @Pintar.etal2018"
+DyFactorial <- lmer(Dytiscidae ~ Fish*Nutrient + (1 | Block), data = df1)
+
+DyAnova <- (anova(DyFactorial))
+
+kbl(
+  DyAnova, col.names = c(
+    "SS",
+    "MS",
+    "df1",
+    "df2",
+    "F",
+    "p"
+    
+  ),
+  digits = c(3,3,0,0,3,4)
+) |>
+  kable_classic()
+```
+
+We can also conduct Mixed ANOVA Tests for the variables.
+
+```{r}
+#| label: tbl-HMixedAnova
+#| tbl-cap: "Mixed-effect model results for Hydrophilidae and predation and nutrient levels"
+#| tbl-subcap:
+#|     - "Fixed effect"
+#|     - "Random effect"
+#| layout-nrow: 2
+
+HMixed <- anova(HFactorial)
+
+kbl(
+  HMixed,
+  col.names = c(
+    "SS",
+    "MS",
+    "df1",
+    "df2",
+    "F",
+    "p"
+  ),
+  digits = c(3,3,0,0,3,4)
+) |>
+  kable_classic()
+
+kbl(
+  rand(HFactorial),
+  col.names = c(
+    "Parameters",
+    "log-liklehood",
+    "AIC",
+    "LRT",
+    "df",
+    "p"
+  ),
+  digits = c(0,3,3,3,0,4)
+)|>
+  kable_classic()
+```
+
+```{r}
+#| label: tbl-CERMixedAnova
+#| tbl-cap: "Mixed-effect model results for Cullex Egg Raft and predation and nutrient levels"
+#| tbl-subcap:
+#|     - "Fixed effect"
+#|     - "Random effect"
+#| layout-nrow: 2
+
+CERMixed <- anova(CERFactorial)
+
+kbl(
+  CERMixed,
+  col.names = c(
+    "SS",
+    "MS",
+    "df1",
+    "df2",
+    "F",
+    "p"
+  ),
+  digits = c(3,3,0,0,3,4)
+) |>
+  kable_classic()
+
+kbl(
+  rand(CERFactorial),
+  col.names = c(
+    "Parameters",
+    "log-liklehood",
+    "AIC",
+    "LRT",
+    "df",
+    "p"
+  ),
+  digits = c(0,3,3,3,0,4)
+)|>
+  kable_classic()
+```
+
+```{r}
+#| label: tbl-DyMixedAnova
+#| tbl-cap: "Mixed-effect model results for Dytiscidae and predation and nutrient levels"
+#| tbl-subcap:
+#|     - "Fixed effect"
+#|     - "Random effect"
+#| layout-nrow: 2
+
+DyMixed <- anova(DyFactorial)
+
+kbl(
+  DyMixed,
+  col.names = c(
+    "SS",
+    "MS",
+    "df1",
+    "df2",
+    "F",
+    "p"
+  ),
+  digits = c(3,3,0,0,3,4)
+) |>
+  kable_classic()
+
+kbl(
+  rand(DyFactorial),
+  col.names = c(
+    "Parameters",
+    "log-liklehood",
+    "AIC",
+    "LRT",
+    "df",
+    "p"
+  ),
+  digits = c(0,3,3,3,0,4)
+)|>
+  kable_classic()
+```
+
 ## Results
+
+Looking at the multiple tests, there are interesting trends that need to be discussed. Examining the Fixed ANOVA results, we can see that predation played an important role within controlling the rates of *Dytiscidae* as well as the rates of Cullex Egg Rafts.
 
 ## References
